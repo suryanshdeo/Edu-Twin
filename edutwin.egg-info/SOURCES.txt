@@ -1,0 +1,5 @@
+setup.py
+edutwin.egg-info/PKG-INFO
+edutwin.egg-info/SOURCES.txt
+edutwin.egg-info/dependency_links.txt
+edutwin.egg-info/top_level.txt
