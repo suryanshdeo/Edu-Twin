@@ -138,7 +138,7 @@ EduTwin/
 ### 1️⃣ Clone Repository
 
 ```bash id="v0bch8"
-git clone https://github.com/YOUR_USERNAME/EduTwin.git
+git clone https://github.com/suryanshdeo/Edu-Twin.git
 cd EduTwin
 ```
 
