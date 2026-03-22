@@ -1,34 +1,140 @@
 """
 EduTwin — Profile Builder
 =========================
-Converts a raw student record into a structured LLP dict + human summary.
+Builds a structured LLP dict from either:
+  1. A database user_id  (real user flow)
+  2. A flat raw dict     (synthetic data / testing)
 
 Usage:
-    from core.profile_builder import build_llp, summarise_llp
+    from core.profile_builder import build_llp_from_db, build_llp, summarise_llp
 """
 
 from __future__ import annotations
-import json
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 
+def build_llp_from_db(user_id: int) -> dict[str, Any]:
+    """
+    Fetch all DB records for a user and assemble a complete LLP dict.
+    Structure is identical to build_llp() so all twin modules work unchanged.
+    """
+    from database.crud import (
+        get_user_by_id, get_profile, get_performance,
+        get_behavioral, get_self_reports, get_global_self_report,
+    )
+
+    user = get_user_by_id(user_id)
+    if not user:
+        raise ValueError(f"User {user_id} not found.")
+
+    profile   = get_profile(user_id) or {}
+    perf_rows = get_performance(user_id)
+    beh       = get_behavioral(user_id) or {}
+    sr_rows   = get_self_reports(user_id)
+    global_sr = get_global_self_report(user_id) or {}
+
+    # Academic aggregation
+    mastery_map, quiz_scores, assign_scores, exam_scores = {}, [], [], []
+    for row in perf_rows:
+        if row["subject"] == "__global__":
+            continue
+        mastery_map[row["subject"]] = float(row["mastery_score"])
+        quiz_scores.append(float(row["quiz_score"]))
+        assign_scores.append(float(row["assignment_score"]))
+        exam_scores.append(float(row["exam_score"]))
+
+    def avg(lst): return round(sum(lst) / len(lst), 1) if lst else 50.0
+
+    quiz_avg       = avg(quiz_scores)
+    assignment_avg = avg(assign_scores)
+    exam_avg       = avg(exam_scores)
+    overall_gpa    = round((quiz_avg*0.30 + assignment_avg*0.30 + exam_avg*0.40) / 25.0, 2)
+    weak, strong   = _derive_weak_strong(mastery_map)
+
+    # Self-reports
+    confidence_map = {}
+    for row in sr_rows:
+        if row["subject"] != "__global__":
+            confidence_map[row["subject"]] = float(row["confidence_score"])
+
+    return {
+        "identity": {
+            "student_id":      f"USR-{user_id:04d}",
+            "name":            user["name"],
+            "email":           user["email"],
+            "age":             20,
+            "year_level":      int(profile.get("year_level", 1)),
+            "major":           profile.get("major", "Computer Science"),
+            "enrolled_on":     profile.get("enrolled_on", "2023-09-01"),
+            "last_updated":    datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "profile_version": "2.0",
+        },
+        "academic": {
+            "scores": {
+                "quiz_avg": quiz_avg, "assignment_avg": assignment_avg,
+                "exam_avg": exam_avg, "overall_gpa": overall_gpa,
+            },
+            "mastery": {
+                "mastery_map": mastery_map,
+                "weak_topics": weak, "strong_topics": strong,
+            },
+            "history": {"total_attempts": len(perf_rows), "score_trend": "stable"},
+        },
+        "behavioral": {
+            "engagement": {
+                "login_freq_per_week": float(beh.get("login_freq_per_week", 3.0)),
+                "avg_session_minutes": float(beh.get("avg_session_minutes", 45.0)),
+                "resources_used":      int(beh.get("resources_used", 3)),
+            },
+            "habits": {
+                "submission_rate":     float(beh.get("submission_rate", 0.8)),
+                "late_submission_pct": float(beh.get("late_submission_pct", 0.1)),
+            },
+            "collaboration": {
+                "peer_interaction": beh.get("peer_interaction", "medium"),
+                "forum_posts":      int(beh.get("forum_posts", 0)),
+            },
+        },
+        "cognitive": {
+            "learning_style":     profile.get("learning_style", "visual"),
+            "processing_speed":   profile.get("processing_speed", "average"),
+            "retention_score":    0.6,
+            "attention_span_min": int(profile.get("attention_span_min", 30)),
+            "common_mistakes":    [],
+        },
+        "self_reported": {
+            "confidence": {
+                "confidence_map": confidence_map,
+                "anxiety_level":  float(global_sr.get("anxiety_level", 0.5)),
+            },
+            "goals": {
+                "target_grade":        global_sr.get("target_grade", "B"),
+                "motivation_score":    float(global_sr.get("motivation_score", 0.5)),
+                "study_hours_per_day": float(global_sr.get("study_hours_per_day", 2.0)),
+            },
+            "preferences": {
+                "preferred_explanation": profile.get("preferred_explanation", "examples"),
+            },
+        },
+    }
+
+
 def build_llp(raw: dict[str, Any]) -> dict[str, Any]:
-    """
-    Convert a flat raw student record into a structured LLP dict.
-    All fields use .get() with safe defaults — no KeyError possible.
-    """
+    """Build LLP from flat raw dict. Used for synthetic data and testing."""
     mastery_map     = _parse_map(raw.get("mastery_map", {}))
     confidence_map  = _parse_map(raw.get("confidence_map", {}))
     weak_topics     = _parse_list(raw.get("weak_topics", []))
     strong_topics   = _parse_list(raw.get("strong_topics", []))
     common_mistakes = _parse_list(raw.get("common_mistakes", []))
 
+    if not weak_topics and mastery_map:
+        weak_topics, strong_topics = _derive_weak_strong(mastery_map)
+
     return {
         "identity": {
             "student_id":      raw.get("student_id", "STU-0000"),
-            "name":            raw.get("name", "Unknown Student"),
+            "name":            raw.get("name", "Unknown"),
             "email":           raw.get("email", ""),
             "age":             int(raw.get("age", 18)),
             "year_level":      int(raw.get("year_level", 1)),
@@ -94,85 +200,53 @@ def build_llp(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def summarise_llp(llp: dict[str, Any]) -> str:
-    """Return a human-readable multi-line summary of an LLP."""
     ident  = llp["identity"]
     acad   = llp["academic"]
     beh    = llp["behavioral"]
     cog    = llp["cognitive"]
     self_r = llp["self_reported"]
-
-    name    = ident["name"]
-    gpa     = acad["scores"]["overall_gpa"]
-    quiz    = acad["scores"]["quiz_avg"]
-    exam    = acad["scores"]["exam_avg"]
-    trend   = acad["history"]["score_trend"]
-    weak    = acad["mastery"]["weak_topics"]
-    strong  = acad["mastery"]["strong_topics"]
+    name   = ident["name"]
+    gpa    = acad["scores"]["overall_gpa"]
+    weak   = acad["mastery"]["weak_topics"]
+    strong = acad["mastery"]["strong_topics"]
     mastery = acad["mastery"]["mastery_map"]
 
     gpa_desc = (
-        "strong performer"        if gpa >= 3.5 else
-        "above-average student"   if gpa >= 2.8 else
-        "average student"         if gpa >= 2.0 else
-        "struggling academically"
+        "strong performer" if gpa >= 3.5 else
+        "above-average"    if gpa >= 2.8 else
+        "average"          if gpa >= 2.0 else "struggling"
     )
-    trend_str = {
-        "improving": "Performance is improving.",
-        "stable":    "Performance is stable.",
-        "declining": "⚠ Scores are declining — intervention recommended.",
-    }.get(trend, "")
-
-    weak_detail   = " and ".join(f"{t} ({int(mastery.get(t,0)*100)}%)" for t in weak)
-    strong_detail = " and ".join(f"{t} ({int(mastery.get(t,0)*100)}%)" for t in strong)
-
-    login      = beh["engagement"]["login_freq_per_week"]
-    session    = beh["engagement"]["avg_session_minutes"]
-    sub_rate   = beh["habits"]["submission_rate"]
-    anxiety    = self_r["confidence"]["anxiety_level"]
-    motivation = self_r["goals"]["motivation_score"]
-    target     = self_r["goals"]["target_grade"]
-    study_hrs  = self_r["goals"]["study_hours_per_day"]
-    pref       = self_r["preferences"]["preferred_explanation"]
-    style      = cog["learning_style"]
-    mistakes   = ", ".join(cog["common_mistakes"]) or "none"
-
-    anxiety_flag = (
-        " ⚠ High anxiety."   if anxiety >= 0.70 else
-        " Moderate anxiety." if anxiety >= 0.50 else ""
-    )
+    weak_d   = " and ".join(f"{t} ({int(mastery.get(t,0)*100)}%)" for t in weak)
+    strong_d = " and ".join(f"{t} ({int(mastery.get(t,0)*100)}%)" for t in strong)
+    anxiety  = self_r["confidence"]["anxiety_level"]
+    anxiety_flag = " ⚠ High anxiety." if anxiety >= 0.70 else " Moderate anxiety." if anxiety >= 0.50 else ""
+    pref = self_r["preferences"]["preferred_explanation"]
+    style = cog["learning_style"]
 
     lines = [
         f"{'='*60}",
-        f"  {name}  |  {_ordinal(ident['year_level'])}-year {ident['major']}  |  ID: {ident['student_id']}",
+        f"  {name}  |  {_ordinal(ident['year_level'])}-year {ident['major']}  |  {ident['student_id']}",
         f"{'='*60}",
-        "ACADEMIC",
-        f"  GPA {gpa:.2f} ({gpa_desc}) | Quiz: {quiz:.1f} | Exam: {exam:.1f}",
-        f"  {trend_str}",
-        f"  Weak:   {weak_detail   or 'none identified'}",
-        f"  Strong: {strong_detail or 'none identified'}",
-        "",
-        "BEHAVIORAL",
-        f"  Logins: {login:.1f}/wk | Session: {session:.0f} min | Submits: {int(sub_rate*100)}%",
-        f"  Peer interaction: {beh['collaboration']['peer_interaction']}",
-        "",
-        "COGNITIVE",
-        f"  Style: {style} | Speed: {cog['processing_speed']} | Retention: {int(cog['retention_score']*100)}%",
-        f"  Common mistakes: {mistakes}",
-        f"  Prefers: {pref} | Attention span: {cog['attention_span_min']} min",
-        "",
-        "SELF-REPORTED",
-        f"  Motivation: {int(motivation*100)}% | Anxiety: {int(anxiety*100)}%{anxiety_flag}",
-        f"  Target grade: {target} | Study: {study_hrs:.1f} hr/day",
-        "",
-        "RECOMMENDATION",
-        f"  → Focus on {' and '.join(weak) if weak else 'maintaining current topics'}; "
-        f"deliver as {pref} for {style} learner.",
+        f"ACADEMIC  GPA {gpa:.2f} ({gpa_desc}) | Quiz: {acad['scores']['quiz_avg']:.1f} | Exam: {acad['scores']['exam_avg']:.1f}",
+        f"  Weak: {weak_d or 'none'}  |  Strong: {strong_d or 'none'}",
+        f"BEHAVIORAL  Logins: {beh['engagement']['login_freq_per_week']:.1f}/wk | Submits: {int(beh['habits']['submission_rate']*100)}%",
+        f"COGNITIVE  Style: {style} | Prefers: {pref}",
+        f"SELF-REPORT  Motivation: {int(self_r['goals']['motivation_score']*100)}% | Anxiety: {int(anxiety*100)}%{anxiety_flag}",
+        f"RECOMMENDATION  → Focus on {' and '.join(weak) if weak else 'current topics'}; use {pref} for {style} learner.",
         f"{'='*60}",
     ]
     return "\n".join(lines)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────
+
+def _derive_weak_strong(mastery_map: dict) -> tuple[list, list]:
+    if not mastery_map:
+        return [], []
+    sorted_t = sorted(mastery_map.items(), key=lambda x: x[1])
+    n = min(2, max(1, len(sorted_t) // 2))
+    return [t for t, _ in sorted_t[:n]], [t for t, _ in sorted_t[-n:]]
+
 
 def _parse_map(value: Any) -> dict[str, float]:
     if isinstance(value, dict):
@@ -197,16 +271,3 @@ def _parse_list(value: Any) -> list[str]:
 
 def _ordinal(n: int) -> str:
     return {1: "1st", 2: "2nd", 3: "3rd"}.get(int(n), f"{n}th")
-
-
-if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    raw_path = Path("data/raw/students.json")
-    if not raw_path.exists():
-        print("Run: python data/generate_data.py first")
-        sys.exit(1)
-    with open(raw_path) as f:
-        records = json.load(f)
-    llp = build_llp(records[0])
-    print(summarise_llp(llp))
