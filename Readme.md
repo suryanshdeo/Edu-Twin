@@ -1,37 +1,27 @@
 # EduTwin
 
-EduTwin is an AI-powered learning companion that builds a **digital twin** of each student from real profile data.  
-It helps students learn better with personalized explanations, weakness insights, performance predictions, and exam-style response simulation.
+Hi! This is EduTwin - a project where we try to build a "digital twin" of a student and use it to give more personal learning support.
 
-## Why EduTwin?
+The core idea is simple: instead of one-size-fits-all learning, we keep a live profile of how a student is doing, then use that profile to generate better help.
 
-Every student learns differently. Most systems still teach everyone the same way.
+## What this project does right now
 
-EduTwin aims to solve that by combining:
+- login/signup for students
+- stores student details in SQLite
+- builds a Live Learner Profile (LLP)
+- finds likely weak topics
+- gives personalized explanations
+- predicts performance level
+- simulates exam-style answers
 
-- student profile data
-- a dynamic Live Learner Profile (LLP)
-- LLM-based reasoning for adaptive support
+## Stack
 
-## What it can do
+- Python
+- Streamlit
+- SQLite
+- Groq API (LLM)
 
-- Student signup/login with hashed passwords
-- Store and update student data in SQLite
-- Build and update a Live Learner Profile (LLP)
-- Diagnose weak areas
-- Generate personalized explanations
-- Predict likely performance bands
-- Simulate exam answers in a student-specific style
-
-## Tech stack
-
-- **Backend:** Python
-- **UI:** Streamlit
-- **Database:** SQLite
-- **LLM:** Groq API
-- **Auth:** Custom auth + password hashing
-
-## Project structure
+## Folder layout
 
 ```text
 EduTwin/
@@ -46,69 +36,46 @@ EduTwin/
 └── Readme.md
 ```
 
-## Quick start
-
-### 1. Clone the repo
+## Run locally
 
 ```bash
 git clone https://github.com/suryanshdeo/Edu-Twin.git
 cd EduTwin
-```
-
-### 2. Create and activate a virtual environment
-
-```bash
 python -m venv venv
 ```
 
-**Windows**
+Activate venv:
 
-```bash
-venv\Scripts\activate
-```
+- Windows: `venv\Scripts\activate`
+- macOS/Linux: `source venv/bin/activate`
 
-**macOS/Linux**
-
-```bash
-source venv/bin/activate
-```
-
-### 3. Install dependencies
+Install deps:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
-
-Create a `.env` file in the project root:
+Create `.env` in project root:
 
 ```env
 GROQ_API_KEY=your_api_key_here
 ```
 
-### 5. Run the app
+Start app:
 
 ```bash
 streamlit run ui/app.py
 ```
 
-## Typical flow
+## Typical student flow
 
-1. Student logs in
-2. Student fills profile information
-3. LLP is generated/updated
-4. Twin engine provides diagnosis, explanation, prediction, and simulation
+1. Sign up / log in
+2. Fill profile inputs
+3. LLP gets created or updated
+4. Use diagnosis, explanation, prediction, and simulation features
 
-## Security notes
+## Notes
 
-- Passwords are hashed before storage
-- API keys are loaded from environment variables
-- No secrets should be committed to this repository
-
-## Roadmap ideas
-
-- Progress tracking over time
-- Better class-level analytics for teachers
-- More explainability in predictions
-- Cloud deployment support
+- passwords are hashed before storing
+- keep API keys in `.env` only
+- this project is still evolving, so expect changes
