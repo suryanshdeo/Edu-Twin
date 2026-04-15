@@ -1,81 +1,252 @@
-# EduTwin
+# 🎓 EduTwin: LLM-Powered Digital Twin of University Students
 
-Hi! This is EduTwin - a project where we try to build a "digital twin" of a student and use it to give more personal learning support.
+## 🚀 Overview
 
-The core idea is simple: instead of one-size-fits-all learning, we keep a live profile of how a student is doing, then use that profile to generate better help.
+EduTwin is an AI-powered system that creates a **Digital Twin of a student** using a dynamic **Live Learner Profile (LLP)** built from real user data.
+It leverages Large Language Models (LLMs) to simulate student behavior, diagnose weaknesses, predict performance, and generate personalized learning content.
 
-## What this project does right now
+---
 
-- login/signup for students
-- stores student details in SQLite
-- builds a Live Learner Profile (LLP)
-- finds likely weak topics
-- gives personalized explanations
-- predicts performance level
-- simulates exam-style answers
+## 💡 Problem Statement
 
-## Stack
+Most education systems treat students uniformly despite differences in:
 
-- Python
-- Streamlit
-- SQLite
-- Groq API (LLM)
+* Learning pace
+* Background knowledge
+* Study habits
+* Cognitive preferences
 
-## Folder layout
+EduTwin addresses this by building a **personalized AI twin for each student**, enabling adaptive and intelligent learning.
 
-```text
+---
+
+## 🧠 Key Features
+
+### 🔐 Authentication System
+
+* Secure **login/signup**
+* Password hashing and session handling
+
+### 🗄️ Database-Driven Profiles
+
+* Stores real student data (no synthetic data)
+* Persistent and updatable learner profiles
+
+### 📊 Live Learner Profile (LLP)
+
+* Dynamic representation of student state
+* Includes academic, behavioral, and self-reported data
+
+### 🔍 Weakness Diagnosis
+
+* Identifies weak topics using LLM reasoning
+
+### 📘 Personalized Explanations
+
+* Tailored explanations based on student profile
+
+### 📈 Performance Prediction
+
+* Predicts future performance (High / Medium / Low)
+
+### 📝 Exam Answer Simulation
+
+* Simulates how a student would answer exam questions
+
+---
+
+## 🏗️ Project Structure
+
+```id="9u0bmn"
 EduTwin/
-├── auth/
-├── core/
 ├── data/
-├── database/
+│   ├── generate_data.py
+│   └── raw/
+├── core/
+│   ├── profile_builder.py
+│   └── llp_updater.py
 ├── twin/
+│   ├── prompt_engine.py
+│   ├── weakness_diagnoser.py
+│   ├── explainer.py
+│   ├── predictor.py
+│   ├── exam_simulator.py
+│   └── twin_engine.py
+├── database/
+│   ├── db.py
+│   └── crud.py
+├── auth/
+│   └── auth.py
 ├── ui/
-├── requirements.txt
+│   ├── app.py
+│   └── views/
+│       ├── student_view.py
+│       ├── teacher_view.py
+│       └── profile_form.py
 ├── setup.py
-└── Readme.md
+├── requirements.txt
+└── README.md
 ```
 
-## Run locally
+---
 
-```bash
+## ⚙️ Tech Stack
+
+* **LLM**: Groq API
+* **Backend**: Python
+* **Frontend/UI**: Streamlit
+* **Database**: SQLite
+* **Auth**: Custom authentication with hashed passwords
+
+---
+
+## 🔄 System Workflow
+
+1. **User Authentication**
+
+   * Student signs up / logs in
+
+2. **Profile Creation**
+
+   * Student inputs:
+
+     * Academic scores
+     * Study habits
+     * Confidence levels
+
+3. **Database Storage**
+
+   * Data stored and managed via CRUD operations
+
+4. **LLP Generation**
+
+   * Profile Builder creates structured learner profile
+
+5. **LLM Twin Engine**
+
+   * Uses LLP for:
+
+     * Weakness detection
+     * Explanation generation
+     * Prediction
+     * Simulation
+
+---
+
+## 🛠️ Installation & Setup
+
+### 1️⃣ Clone Repository
+
+```bash id="v0bch8"
 git clone https://github.com/suryanshdeo/Edu-Twin.git
 cd EduTwin
+```
+
+---
+
+### 2️⃣ Create Virtual Environment
+
+```bash id="uv6v0z"
 python -m venv venv
 ```
 
-Activate venv:
+Activate:
 
-- Windows: `venv\Scripts\activate`
-- macOS/Linux: `source venv/bin/activate`
+* Windows:
 
-Install deps:
+```bash id="0jhv02"
+venv\Scripts\activate
+```
 
-```bash
+* Mac/Linux:
+
+```bash id="vt4q8z"
+source venv/bin/activate
+```
+
+---
+
+### 3️⃣ Install Dependencies
+
+```bash id="17lq6d"
 pip install -r requirements.txt
 ```
 
-Create `.env` in project root:
+---
 
-```env
+### 4️⃣ Setup Environment Variables
+
+Create a `.env` file:
+
+```id="l9ehts"
 GROQ_API_KEY=your_api_key_here
 ```
 
-Start app:
+---
 
-```bash
+### 5️⃣ Run the Application
+
+```bash id="3gpytr"
 streamlit run ui/app.py
 ```
 
-## Typical student flow
+---
 
-1. Sign up / log in
-2. Fill profile inputs
-3. LLP gets created or updated
-4. Use diagnosis, explanation, prediction, and simulation features
+## 👨‍🎓 Usage
 
-## Notes
+### Student Flow
 
-- passwords are hashed before storing
-- keep API keys in `.env` only
-- this project is still evolving, so expect changes
+* Sign up / Log in
+* Fill profile form
+* Generate learner profile
+* Use:
+
+  * Weakness diagnosis
+  * Topic explanation
+  * Performance prediction
+  * Exam simulation
+
+---
+
+### Teacher Flow 
+
+* View all students
+* Analyze class trends
+* Identify weak learners
+
+---
+
+## 📈 Evaluation Metrics
+
+| Capability         | Metric                |
+| ------------------ | --------------------- |
+| Weakness Diagnosis | Precision / Recall    |
+| Prediction         | Accuracy / F1         |
+| Explanation        | Human Rating          |
+| Simulation         | Behavioral Similarity |
+
+---
+
+## 🔐 Security Practices
+
+* Password hashing (bcrypt)
+* Environment variable usage for API keys
+* No sensitive data stored in repo
+
+---
+
+## 🔮 Future Enhancements
+
+* 📅 Temporal tracking of student progress
+* 🔁 Counterfactual analysis
+* 👥 Student clustering
+* 🌐 Deployment (Streamlit Cloud)
+* 📊 Advanced analytics dashboard
+
+---
+
+
+
+
+
+
