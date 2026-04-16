@@ -14,9 +14,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import os
 import importlib.util
 import streamlit as st
+from dotenv import load_dotenv
 from database.db import init_db
 from auth.auth import is_logged_in, get_current_user, logout
 
+load_dotenv()
 init_db()
 
 st.set_page_config(page_title="EduTwin", page_icon="🎓", layout="wide")

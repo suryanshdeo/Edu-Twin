@@ -4,3 +4,4 @@ pandas
 groq
 streamlit
 bcrypt
+python-dotenv

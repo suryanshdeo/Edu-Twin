@@ -182,6 +182,9 @@ Create a `.env` file:
 GROQ_API_KEY=your_api_key_here
 ```
 
+The app loads this `.env` automatically at startup.  
+For cloud deployments, set `GROQ_API_KEY` in the platform's environment-variable settings.
+
 ---
 
 ### 5️⃣ Run the Application
@@ -244,7 +247,6 @@ streamlit run ui/app.py
 * 📊 Advanced analytics dashboard
 
 ---
-
 
 
 
